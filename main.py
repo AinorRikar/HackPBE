@@ -290,41 +290,43 @@ WHERE ((egeresults.SubjectId, egeresults.ParticipantId)
 	OR (egeresults.SubjectId, egeresults.ParticipantId)
 		IN (SELECT SubjectId, ParticipantId FROM selfdiagnosticresults))
 	AND egeresults.SubjectId = 75"""
-
-    data = pd.read_sql(sql, con)
-    log = res;
-    ege = res.pop('EGE')
+    log = res
     participants = res.pop('stud')
+    ege = res.pop('EGE')
     subjects = res.pop('les')
-    res.drop(res.columns[0], axis=1)
+    data = res
 
 
     print(data.head())
     print(ege.head())
     print(participants.head())
 
-    dataset = tf.data.Dataset.from_tensor_slices((data.values, ege.values))
-    for feat, targ in dataset.take(10):
-        print('Features: {}, Target: {}'.format(feat, targ))
+    data = np.asarray(data).astype('float32')
+    ege = np.asarray(ege).astype('float32')
 
-    train_x = data
+    train_x = pd.DataFrame(data)
     train_y = ege
 
 
     def get_compiled_model():
         model = keras.Sequential([
-            keras.layers.Dense(128, activation='relu'),
+            keras.layers.Dense(256, activation='relu'),
+            keras.layers.Dense(512, activation='sigmoid'),
             keras.layers.Dense(1024, activation='relu'),
+            keras.layers.Dense(256, activation='sigmoid'),
             keras.layers.Dense(1)
         ])
 
-        model.compile(optimizer='adam',
-                      loss='mse',
+        model.compile(optimizer='adamax',
+                      loss='mae',
                       metrics=keras.metrics.RootMeanSquaredError())
 
         return model
 
 
+
+    print(len(train_x))
+    print(len(train_y))
 
     model = tf.keras.models.load_model('my_model')
     if(debug > 0):
@@ -335,22 +337,18 @@ WHERE ((egeresults.SubjectId, egeresults.ParticipantId)
 
     pred = model.predict(train_x)
 
-    for i in pred:
-        i[0] *= 100
+    print(pred[0][0], train_y[0])
+    print(pred[1][0], train_y[1])
+    print(pred[2][0], train_y[2])
+    print(pred[3][0], train_y[3])
+    print(pred[4][0], train_y[4])
+    print(pred[5][0], train_y[5])
+    print(pred[6][0], train_y[6])
+    print(pred[7][0], train_y[7])
+    print(pred[8][0], train_y[8])
+    print(pred[9][0], train_y[9])
 
-
-    print(pred[0][0], train_y[0] * 100)
-    print(pred[1][0], train_y[1] * 100)
-    print(pred[2][0], train_y[2] * 100)
-    print(pred[3][0], train_y[3] * 100)
-    print(pred[4][0], train_y[4] * 100)
-    print(pred[5][0], train_y[5] * 100)
-    print(pred[6][0], train_y[6] * 100)
-    print(pred[7][0], train_y[7] * 100)
-    print(pred[8][0], train_y[8] * 100)
-    print(pred[9][0], train_y[9] * 100)
-
-    l = data.join(participants)
+    l = pd.DataFrame(data).join(participants)
     l = l.join(subjects)
     l = l.join(pd.DataFrame(pred))
     l.pop('DR')
