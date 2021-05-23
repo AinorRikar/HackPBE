@@ -4,6 +4,7 @@ import pandas as pd
 import tensorflow as tf
 from tensorflow import keras
 
+
 con = pymysql.connect(host='localhost',
                       user='root',
                       password='password1234',
@@ -12,9 +13,10 @@ con = pymysql.connect(host='localhost',
                       cursorclass=pymysql.cursors.DictCursor)
 
 with con:
+    debug = 0
     cur = con.cursor()
 
-    sql = """SELECT egeresults.ParticipantId,
+    sql = """SELECT egeresults.ParticipantId, egeresults.SubjectId,
     egeresults.MarkPercent / 100 "ege",
     diagnosticresults.Mark / diagnosticresults.MaxMark "dr",
     selfdiagnosticresults.Mark / selfdiagnosticresults.MaxMark "sdr"
@@ -32,6 +34,7 @@ WHERE ((egeresults.SubjectId, egeresults.ParticipantId)
     log = data;
     ege = data.pop('ege')
     participants = data.pop('ParticipantId')
+    subjects = data.pop('SubjectId')
     data = data.replace(np.nan, 0)
 
     print(data.head())
@@ -60,22 +63,40 @@ WHERE ((egeresults.SubjectId, egeresults.ParticipantId)
         return model
 
 
-    model = get_compiled_model()
-    model.fit(train_x, train_y, epochs=1000)
+
+    model = tf.keras.models.load_model('my_model')
+    if(debug):
+        model = get_compiled_model()
+        model.fit(train_x, train_y, epochs=100)
+
+    model.save('my_model')
 
     pred = model.predict(train_x)
 
-    print(pred[0][0], train_y[0])
-    print(pred[1][0], train_y[1])
-    print(pred[2][0], train_y[2])
-    print(pred[3][0], train_y[3])
-    print(pred[4][0], train_y[4])
-    print(pred[5][0], train_y[5])
-    print(pred[6][0], train_y[6])
-    print(pred[7][0], train_y[7])
-    print(pred[8][0], train_y[8])
-    print(pred[9][0], train_y[9])
+    for i in pred:
+        i[0] *= 100
 
+
+    print(pred[0][0], train_y[0] * 100)
+    print(pred[1][0], train_y[1] * 100)
+    print(pred[2][0], train_y[2] * 100)
+    print(pred[3][0], train_y[3] * 100)
+    print(pred[4][0], train_y[4] * 100)
+    print(pred[5][0], train_y[5] * 100)
+    print(pred[6][0], train_y[6] * 100)
+    print(pred[7][0], train_y[7] * 100)
+    print(pred[8][0], train_y[8] * 100)
+    print(pred[9][0], train_y[9] * 100)
+
+    l = data.join(participants)
+    l = l.join(subjects)
+    l = l.join(pd.DataFrame(pred))
+    l.pop('dr')
+    l.pop('sdr')
+
+    print(l.head())
+
+    l.to_csv("submission.csv", sep=';')
 
 
 
